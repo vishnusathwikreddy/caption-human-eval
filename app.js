@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "1";
+const APP_VERSION = "2";
 const STORE = "capcheck:v" + APP_VERSION + ":";
 const ANSWERS = [["yes", "Yes, hallucinated"], ["no", "No"], ["cant", "Can't tell"]];
 const ANSWER_LABEL = Object.fromEntries(ANSWERS);
@@ -34,20 +34,33 @@ function richText(s) {
   return escapeHtml(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*\*/g, "");
 }
 
+// ---------------------------------------------------------------- annotator code (no names asked)
+// random code that identifies a session in the CSV and file name; no confusable characters
+function newId() {
+  const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", buf = new Uint32Array(6);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, x => abc[x % abc.length]).join("");
+}
+
 // ---------------------------------------------------------------- storage (per-browser only)
-function keyFor(name, set) { return STORE + set + ":" + name.trim().toLowerCase(); }
+function keyFor(id, set) { return STORE + set + ":" + id; }
 function save() {
   try {
-    localStorage.setItem(keyFor(S.name, S.set), JSON.stringify(S));
-    localStorage.setItem(STORE + "last", JSON.stringify({ name: S.name, set: S.set }));
+    localStorage.setItem(keyFor(S.id, S.set), JSON.stringify(S));
+    localStorage.setItem(STORE + "last", JSON.stringify({ id: S.id, set: S.set }));
+    localStorage.setItem(STORE + "last:" + S.set, JSON.stringify({ id: S.id, set: S.set }));
   } catch (e) { /* storage unavailable: answers live only in this tab until downloaded */ }
 }
-function loadState(name, set) {
-  try { const v = localStorage.getItem(keyFor(name, set)); return v ? JSON.parse(v) : null; }
+function loadState(id, set) {
+  try { const v = localStorage.getItem(keyFor(id, set)); return v ? JSON.parse(v) : null; }
   catch (e) { return null; }
 }
-function lastSession() {
-  try { return JSON.parse(localStorage.getItem(STORE + "last") || "null"); } catch (e) { return null; }
+// latest session for a set, or overall when set is null; returns the saved state or null
+function lastSession(set) {
+  try {
+    const last = JSON.parse(localStorage.getItem(STORE + (set ? "last:" + set : "last")) || "null");
+    return last && last.id && DATA.sets[last.set] ? loadState(last.id, last.set) : null;
+  } catch (e) { return null; }
 }
 
 // ---------------------------------------------------------------- seeded order per annotator
@@ -78,8 +91,8 @@ function rec(id) {
   if (!S.answers[id]) S.answers[id] = { t: {}, c: "", ms: 0, at: "" };
   return S.answers[id];
 }
-function itemComplete(item) {
-  const r = S.answers[item.id];
+function itemComplete(item, st = S) {
+  const r = st.answers[item.id];
   return !!r && item.targets.every(t => {
     const a = r.t[t.n];
     return a && a.a && (a.a !== "yes" || (a.w && a.w.length));
@@ -114,9 +127,9 @@ function setChrome() {
   const done = S.order.filter(id => itemComplete(itemById(id))).length;
   prog.hidden = false;
   $("#progress-bar").style.width = (100 * done / n) + "%";
-  if (S.phase === "practice") $("#status").textContent = `${S.name} · Set ${S.set} · Practice ${S.pIdx + 1} of ${PRACTICE.length}`;
-  else if (S.phase === "main") $("#status").textContent = `${S.name} · Set ${S.set} · Item ${S.idx + 1} of ${n} · ${done} done`;
-  else $("#status").textContent = `${S.name} · Set ${S.set} · ${done} of ${n} done`;
+  if (S.phase === "practice") $("#status").textContent = `Set ${S.set} · Practice ${S.pIdx + 1} of ${PRACTICE.length}`;
+  else if (S.phase === "main") $("#status").textContent = `Set ${S.set} · Item ${S.idx + 1} of ${n} · ${done} done`;
+  else $("#status").textContent = `Set ${S.set} · ${done} of ${n} done`;
 }
 
 function rulesNode() { return $("#rules-tpl").content.cloneNode(true); }
@@ -128,29 +141,30 @@ function renderWelcome() {
   const urlSet = (new URLSearchParams(location.search).get("set") || "").toUpperCase();
   const sets = Object.keys(DATA.sets);
   const fixedSet = sets.includes(urlSet) ? urlSet : null;
-  const last = lastSession();
+  const saved = lastSession(fixedSet);
   const n = fixedSet ? DATA.sets[fixedSet].length : DATA.sets[sets[0]].length;
 
-  const nameIn = el("input", { type: "text", id: "name", autocomplete: "name", placeholder: "First and last name" });
   const setIn = fixedSet
     ? el("input", { type: "text", id: "set", value: "Set " + fixedSet, disabled: true })
     : el("select", { id: "set" }, el("option", { value: "" }, "Choose your set"), sets.map(s => el("option", { value: s }, "Set " + s)));
   const err = el("div", { class: "error", role: "alert" });
 
   function start() {
-    const name = nameIn.value.trim();
     const set = fixedSet || setIn.value;
-    if (!name) { err.textContent = "Please enter your name."; nameIn.focus(); return; }
     if (!set) { err.textContent = "Please choose the set you were given."; return; }
-    begin(name, set);
+    if (lastSession(set) && !confirm(`This browser already has saved answers for Set ${set}. ` +
+      "Start a new, empty session? Choose Cancel to go back and continue where you left off.")) return;
+    begin(newId(), set);
   }
-  nameIn.addEventListener("keydown", e => { if (e.key === "Enter") start(); });
 
   let resume = null;
-  if (last && DATA.sets[last.set] && (!fixedSet || fixedSet === last.set) && loadState(last.name, last.set)) {
+  if (saved) {
+    const items = DATA.sets[saved.set];
+    const done = saved.order.filter(id => { const it = items.find(x => x.id === id); return it && itemComplete(it, saved); }).length;
     resume = el("div", { class: "card" },
-      el("p", {}, `Welcome back, ${last.name}. Your answers for Set ${last.set} are saved in this browser.`),
-      el("button", { class: "primary", type: "button", onclick: () => begin(last.name, last.set) }, "Continue where you left off"));
+      el("p", {}, `Welcome back. Your answers for Set ${saved.set} are saved in this browser ` +
+        `(${done} of ${saved.order.length} items done).`),
+      el("button", { class: "primary", type: "button", onclick: () => begin(saved.id, saved.set) }, "Continue where you left off"));
   }
 
   const app = $("#app");
@@ -164,21 +178,21 @@ function renderWelcome() {
     el("div", { class: "card" }, el("h2", {}, "How to judge"), rulesNode()),
     el("div", { class: "card" },
       el("h2", {}, "Start"),
-      el("p", { class: "note" }, "First you do 3 practice items with feedback. Please use a laptop or desktop."),
+      el("p", { class: "note" }, "First you do 3 practice items with feedback. Please use a laptop or desktop. " +
+        "We don't ask for your name: your answers are saved under a random code."),
       el("div", { class: "form-row" },
-        el("label", {}, "Your name", nameIn),
         el("label", {}, "Set", setIn),
         el("button", { class: "primary", type: "button", onclick: start }, "Start")),
       err)));
   window.scrollTo(0, 0);
 }
 
-function begin(name, set) {
-  S = loadState(name, set);
+function begin(id, set) {
+  S = loadState(id, set);
   if (!S) {
     S = {
-      name, set, data_version: DATA.version, app_version: APP_VERSION, started: new Date().toISOString(),
-      order: shuffled(DATA.sets[set].map(it => it.id), hashStr(name.toLowerCase() + "|" + set)),
+      id, set, data_version: DATA.version, app_version: APP_VERSION, started: new Date().toISOString(),
+      order: shuffled(DATA.sets[set].map(it => it.id), hashStr(id + "|" + set)),
       phase: "practice", pIdx: 0, idx: 0, checked: {}, answers: {},
     };
     save();
@@ -353,7 +367,8 @@ function renderDone() {
         el("button", { type: "button", class: "primary", onclick: downloadCsv }, "Download answers (CSV)"),
         el("button", { type: "button", onclick: () => copyCsv(msg) }, "Copy answers as text")),
       msg,
-      el("p", { class: "note" }, "If the download does not work, use “Copy answers as text” and paste it into an email or chat.")),
+      el("p", { class: "note" }, "If the download does not work, use “Copy answers as text” and paste it into an email or chat."),
+      el("p", { class: "note" }, `Your code is ${S.id}; it is in the file name.`)),
     el("div", { class: "big-actions" },
       el("button", { type: "button", onclick: () => { S.phase = "main"; S.idx = n - 1; save(); route(); } }, "Review my answers"))));
   window.scrollTo(0, 0);
@@ -376,7 +391,7 @@ function buildCsv() {
     for (const t of item.targets) {
       const a = r.t[t.n] || { a: "", w: [] };
       const w = [...(a.w || [])].sort((x, y) => x - y);
-      rows.push([S.name, S.set, phase, pos, item.id, item.img.replace(/^img\//, ""), t.n, a.a,
+      rows.push([S.id, S.set, phase, pos, item.id, item.img.replace(/^img\//, ""), t.n, a.a,
         w.length ? wrongWords(t.text, w) : "", w.join(" "), t.text, r.c || "", Math.round((r.ms || 0) / 1000),
         r.at || "", DATA.version, APP_VERSION]);
     }
@@ -387,10 +402,9 @@ function buildCsv() {
 }
 
 function downloadCsv() {
-  const slug = S.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "anon";
   const blob = new Blob(["﻿" + buildCsv()], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  const a = el("a", { href: url, download: `capcheck_set${S.set}_${slug}.csv` });
+  const a = el("a", { href: url, download: `capcheck_set${S.set}_${S.id}.csv` });
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
