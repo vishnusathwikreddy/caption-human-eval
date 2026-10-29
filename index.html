@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caption Fact-Check</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">Caption fact-check</div>
+  <div class="status" id="status"></div>
+  <div class="top-actions">
+    <button type="button" id="btn-rules" class="ghost" hidden>Rules</button>
+    <button type="button" id="btn-save" class="ghost" hidden>Download answers</button>
+  </div>
+  <div class="progress" id="progress" hidden><div class="progress-bar" id="progress-bar"></div></div>
+</header>
+
+<main id="app"><p class="loading">Loading…</p></main>
+
+<aside id="rules-panel" class="rules-panel" hidden aria-label="Rules">
+  <div class="rules-panel-head">
+    <h2>Rules</h2>
+    <button type="button" class="ghost" id="btn-rules-close">Close</button>
+  </div>
+  <div class="rules-panel-body"></div>
+</aside>
+
+<div id="zoom" class="zoom" hidden><img alt="Enlarged photo"></div>
+
+<template id="rules-tpl">
+  <p>Each item shows a photo and a description of it written by an AI. A few sentences of the
+  description are <mark class="t demo">highlighted and numbered</mark>. For each highlighted
+  sentence, decide whether it is <b>hallucinated</b>: whether it says something the photo
+  clearly shows is not true.</p>
+
+  <h3>Answer “Yes, hallucinated” if the sentence has at least one claim the photo clearly contradicts</h3>
+  <ul>
+    <li><b>Object:</b> something or someone that is not in the photo (“two people near the van” when nobody is there).</li>
+    <li><b>Attribute:</b> a wrong colour, material, size or state of something that is there (“a red car” when the car is blue).</li>
+    <li><b>Count:</b> a clearly wrong number (“two fire hydrants” when there is one).</li>
+    <li><b>Relation:</b> a clearly wrong position or action (“the cat is on the table” when it is under the chair).</li>
+  </ul>
+  <p>One wrong claim is enough, even if the rest of the sentence is right. After answering Yes,
+  click the word(s) that are wrong.</p>
+
+  <h3>Answer “No” if everything the sentence says about the photo is right or roughly right</h3>
+  <p>These are <b>not</b> errors:</p>
+  <ul>
+    <li>Approximate counts and positions that roughly fit: “several”, “a few”, “a crowd”, “near”, “in the background”.</li>
+    <li>Interpretation, mood or purpose: “creating a cozy atmosphere”, “likely a home office”, “enjoying their day”.</li>
+    <li>A hedged guess about something that is there: “appears to be a delivery truck” for a branded van.
+      A hedged claim (“appears to be”, “possibly”) is hallucinated only if the thing is clearly not in the photo at all.</li>
+  </ul>
+
+  <h3>Answer “Can't tell” if the claim cannot be checked</h3>
+  <p>For example, it is about something too small, blurry, dark or hidden to see.</p>
+
+  <h3>Also</h3>
+  <ul>
+    <li>Judge only the highlighted sentences, but read the whole description: a sentence may refer back to it (“it”, “the man”).</li>
+    <li>Click the photo to enlarge it.</li>
+    <li>Items differ: some have no hallucinated sentence, some have several. Judge each sentence on its own.</li>
+  </ul>
+</template>
+
+<noscript><p class="loading">This page needs JavaScript.</p></noscript>
+<footer class="foot">Photos from <a href="https://cocodataset.org">MS COCO</a>, under the Creative Commons licences of their Flickr owners.</footer>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+[
+ {
+  "id": "practice1",
+  "img": "img/COCO_val2014_000000196759.jpg",
+  "segs": [
+   [
+    "The image features a white van with a large advertisement on its side, promoting Lay's potato chips.",
+    1
+   ],
+   [
+    " ",
+    0
+   ],
+   [
+    "The van is parked in a parking lot, and it appears to be a delivery truck.",
+    2
+   ],
+   [
+    " The advertisement is quite prominent, covering a significant portion of the van's side.\n\nIn the background, there are a few other vehicles, including a car and a truck. ",
+    0
+   ],
+   [
+    "Additionally, there are two people visible in the scene, one near the center of the image and the other towards the right side.",
+    3
+   ]
+  ],
+  "targets": [
+   {
+    "n": 1,
+    "text": "The image features a white van with a large advertisement on its side, promoting Lay's potato chips.",
+    "answer": "no",
+    "wrong": "",
+    "why": "The van is white and has a Lay's advertisement on its side."
+   },
+   {
+    "n": 2,
+    "text": "The van is parked in a parking lot, and it appears to be a delivery truck.",
+    "answer": "no",
+    "wrong": "",
+    "why": "It is in a parking lot. \"Appears to be a delivery truck\" is a hedged guess about something that is there (a branded van), not an error."
+   },
+   {
+    "n": 3,
+    "text": "Additionally, there are two people visible in the scene, one near the center of the image and the other towards the right side.",
+    "answer": "yes",
+    "wrong": "two people",
+    "why": "There is nobody in the photo."
+   }
+  ]
+ },
+ {
+  "id": "practice2",
+  "img": "img/COCO_val2014_000000366178.jpg",
+  "segs": [
+   [
+    "The image depicts a snowy road with a yellow sign on a pole, possibly indicating a pedestrian crossing. ",
+    0
+   ],
+   [
+    "The road is surrounded by snow, and there are several cars parked or driving along the road.",
+    1
+   ],
+   [
+    " Some cars are closer to the foreground, while others are further away, creating a sense of depth in the scene.\n\n",
+    0
+   ],
+   [
+    "In addition to the cars, there are two fire hydrants visible in the image, one near the center and the other towards the right side of the scene.",
+    2
+   ],
+   [
+    " The presence of these fire hydrants suggests that the area is well-prepared for emergencies.",
+    0
+   ]
+  ],
+  "targets": [
+   {
+    "n": 1,
+    "text": "The road is surrounded by snow, and there are several cars parked or driving along the road.",
+    "answer": "no",
+    "wrong": "",
+    "why": "Snow everywhere, and a few cars are visible. \"Several\" is an approximate count; don't nitpick counts like this."
+   },
+   {
+    "n": 2,
+    "text": "In addition to the cars, there are two fire hydrants visible in the image, one near the center and the other towards the right side of the scene.",
+    "answer": "yes",
+    "wrong": "two",
+    "why": "There is one fire hydrant (bottom right). A clearly wrong number is an error."
+   }
+  ]
+ },
+ {
+  "id": "practice3",
+  "img": "img/COCO_val2014_000000044068.jpg",
+  "segs": [
+   [
+    "The image features a brown teddy bear sitting on a chair, which is positioned in the center of the scene.",
+    1
+   ],
+   [
+    " The chair is covered with a red cushion, adding a pop of color to the scene. ",
+    0
+   ],
+   [
+    "The teddy bear appears to be wearing a red bow tie, giving it a charming and playful appearance.",
+    2
+   ],
+   [
+    " The chair is surrounded by a few other chairs, but the main focus remains on the teddy bear.",
+    0
+   ]
+  ],
+  "targets": [
+   {
+    "n": 1,
+    "text": "The image features a brown teddy bear sitting on a chair, which is positioned in the center of the scene.",
+    "answer": "no",
+    "wrong": "",
+    "why": "A brown teddy bear sits on a chair in the middle of the photo."
+   },
+   {
+    "n": 2,
+    "text": "The teddy bear appears to be wearing a red bow tie, giving it a charming and playful appearance.",
+    "answer": "no",
+    "wrong": "",
+    "why": "It wears a red plaid bow. \"Charming and playful\" is interpretation; never judge it. Items can have no hallucinated sentence at all."
+   }
+  ]
+ }
+]
