@@ -1,7 +1,7 @@
 "use strict";
 
-const APP_VERSION = "2";
-const STORE = "capcheck:v" + APP_VERSION + ":";
+const APP_VERSION = "3";   // 3: no word selection, sentence-level answers only
+const STORE = "capcheck:v2:";   // kept at v2 so sessions started before version 3 carry over
 const ANSWERS = [["yes", "Yes, hallucinated"], ["no", "No"], ["cant", "Can't tell"]];
 const ANSWER_LABEL = Object.fromEntries(ANSWERS);
 
@@ -95,7 +95,7 @@ function itemComplete(item, st = S) {
   const r = st.answers[item.id];
   return !!r && item.targets.every(t => {
     const a = r.t[t.n];
-    return a && a.a && (a.a !== "yes" || (a.w && a.w.length));
+    return !!(a && a.a);
   });
 }
 function flushTime() {
@@ -263,40 +263,20 @@ function renderQuestion(item, t, r, checked, err) {
   const a = r.t[t.n] || (r.t[t.n] = { a: "", w: [] });
   const box = el("div", { class: "q", "data-n": t.n });
   const head = el("div", { class: "q-head" }, el("span", { class: "badge" }, String(t.n)), `Is sentence ${t.n} hallucinated?`);
-  const words = el("div", { class: "words", hidden: a.a !== "yes" });
-  const toks = el("div", { class: "tokens" });
-  tokens(t.text).forEach((w, i) => {
-    const tok = el("span", { class: "tok" + (a.w.includes(i) ? " sel" : ""), role: "button", tabindex: "0", "aria-pressed": String(a.w.includes(i)) }, w);
-    const toggle = () => {
-      if (checked) return;
-      const k = a.w.indexOf(i);
-      if (k >= 0) a.w.splice(k, 1); else a.w.push(i);
-      tok.classList.toggle("sel", k < 0);
-      tok.setAttribute("aria-pressed", String(k < 0));
-      r.at = new Date().toISOString(); err.textContent = ""; save(); setChrome();
-    };
-    tok.addEventListener("click", toggle);
-    tok.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
-    toks.append(tok, " ");
-  });
-  words.append(el("div", { class: "words-label" }, "Click the word(s) that are wrong:"), toks);
-
   const choices = el("div", { class: "choices", role: "group", "aria-label": `Sentence ${t.n}` });
   for (const [val, label] of ANSWERS) {
     const b = el("button", { type: "button", "aria-pressed": String(a.a === val), disabled: !!checked }, label);
     b.addEventListener("click", () => {
       a.a = val;
-      if (val !== "yes") a.w = [];
+      a.w = [];
       for (const x of choices.children) x.setAttribute("aria-pressed", "false");
       b.setAttribute("aria-pressed", "true");
-      words.hidden = val !== "yes";
-      if (val !== "yes") toks.querySelectorAll(".tok.sel").forEach(x => { x.classList.remove("sel"); x.setAttribute("aria-pressed", "false"); });
       r.at = new Date().toISOString(); err.textContent = ""; save(); setChrome();
     });
     choices.append(b);
   }
 
-  box.append(head, choices, words);
+  box.append(head, choices);
   if (checked) box.append(feedback(t, a));
   const mark = () => document.querySelector(`mark.t[data-n="${t.n}"]`);
   box.addEventListener("mouseenter", () => mark() && mark().classList.add("active"));
@@ -316,9 +296,7 @@ function feedback(t, a) {
 function goNext(err) {
   const item = currentItem();
   if (!itemComplete(item)) {
-    const r = S.answers[item.id];
-    const missingWords = item.targets.some(t => r && r.t[t.n] && r.t[t.n].a === "yes" && !r.t[t.n].w.length);
-    err.textContent = missingWords ? "For each “Yes”, click the wrong word(s)." : "Please answer every highlighted sentence.";
+    err.textContent = "Please answer every highlighted sentence.";
     return;
   }
   flushTime();
