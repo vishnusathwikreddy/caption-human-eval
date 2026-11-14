@@ -143,6 +143,8 @@ function renderWelcome() {
   const fixedSet = sets.includes(urlSet) ? urlSet : null;
   const saved = lastSession(fixedSet);
   const n = fixedSet ? DATA.sets[fixedSet].length : DATA.sets[sets[0]].length;
+  const nSent = (fixedSet ? DATA.sets[fixedSet] : DATA.sets[sets[0]]).reduce((a, it) => a + it.targets.length, 0);
+  const took = nSent > 80 ? "about an hour" : `about ${Math.max(10, Math.round(nSent * 0.5 / 5) * 5)} minutes`;
 
   const setIn = fixedSet
     ? el("input", { type: "text", id: "set", value: "Set " + fixedSet, disabled: true })
@@ -171,8 +173,8 @@ function renderWelcome() {
   app.replaceChildren(el("div", { class: "page" },
     el("h1", {}, "Is the description right about the photo?"),
     el("p", { class: "lead" },
-      `You will see ${n} photos, each with a description written by an AI. For a few highlighted sentences per photo, ` +
-      "you decide whether the sentence is hallucinated. It takes about an hour. Your answers are saved in this browser " +
+      `You will see ${n} photos, each with a description written by an AI. For one to three highlighted sentences per photo, ` +
+      `you decide whether the sentence is hallucinated. It takes ${took}. Your answers are saved in this browser " +
       "as you go, so you can stop and come back later on the same computer."),
     resume,
     el("div", { class: "card" }, el("h2", {}, "How to judge"), rulesNode()),
