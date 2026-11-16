@@ -55,10 +55,11 @@ function loadState(id, set) {
   try {
     const v = localStorage.getItem(keyFor(id, set)); if (!v) return null;
     const s = JSON.parse(v);
-    if (DATA.sets[s.set] && Array.isArray(s.order)) {   // drop items removed from the set after this session started
+    if (DATA.sets[s.set] && Array.isArray(s.order)) {   // the set changed after this session started:
       const ids = new Set(DATA.sets[s.set].map(it => it.id)), keep = s.order.filter(x => ids.has(x));
       s.idx = Math.min(s.order.slice(0, s.idx || 0).filter(x => ids.has(x)).length, Math.max(keep.length - 1, 0));
-      s.order = keep;
+      const have = new Set(keep);                       // drop removed items, append added ones (seeded order)
+      s.order = keep.concat(shuffled(DATA.sets[s.set].map(it => it.id).filter(x => !have.has(x)), hashStr(s.id + "|" + s.set + "|add")));
     }
     return s;
   } catch (e) { return null; }
