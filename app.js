@@ -1,8 +1,8 @@
 "use strict";
 
-const APP_VERSION = "3";   // 3: no word selection, sentence-level answers only
+const APP_VERSION = "4";   // 3: no word selection, sentence-level answers only; 4: no "can't tell" (yes/no only)
 const STORE = "capcheck:v2:";   // kept at v2 so sessions started before version 3 carry over
-const ANSWERS = [["yes", "Yes, hallucinated"], ["no", "No"], ["cant", "Can't tell"]];
+const ANSWERS = [["yes", "Yes, hallucinated"], ["no", "No"]];   // "can't tell" removed 16 Nov; saved ones must be re-answered
 const ANSWER_LABEL = Object.fromEntries(ANSWERS);
 
 let DATA = null;      // {version, sets: {A: [item...]}}
@@ -104,7 +104,7 @@ function itemComplete(item, st = S) {
   const r = st.answers[item.id];
   return !!r && item.targets.every(t => {
     const a = r.t[t.n];
-    return !!(a && a.a);
+    return !!(a && ANSWER_LABEL[a.a]);   // an old "cant" answer no longer counts
   });
 }
 function flushTime() {
