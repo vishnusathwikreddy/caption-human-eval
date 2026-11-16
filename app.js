@@ -52,8 +52,16 @@ function save() {
   } catch (e) { /* storage unavailable: answers live only in this tab until downloaded */ }
 }
 function loadState(id, set) {
-  try { const v = localStorage.getItem(keyFor(id, set)); return v ? JSON.parse(v) : null; }
-  catch (e) { return null; }
+  try {
+    const v = localStorage.getItem(keyFor(id, set)); if (!v) return null;
+    const s = JSON.parse(v);
+    if (DATA.sets[s.set] && Array.isArray(s.order)) {   // drop items removed from the set after this session started
+      const ids = new Set(DATA.sets[s.set].map(it => it.id)), keep = s.order.filter(x => ids.has(x));
+      s.idx = Math.min(s.order.slice(0, s.idx || 0).filter(x => ids.has(x)).length, Math.max(keep.length - 1, 0));
+      s.order = keep;
+    }
+    return s;
+  } catch (e) { return null; }
 }
 // latest session for a set, or overall when set is null; returns the saved state or null
 function lastSession(set) {
